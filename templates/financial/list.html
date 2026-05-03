@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Financeiro{% endblock %}
+{% block nav_financial %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-coins" style="color:var(--accent-orange)"></i>Controle Financeiro</div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'financial:export_pdf' %}" class="btn-secondary-custom" style="padding:9px 16px;font-size:.85rem;"><i class="fas fa-file-pdf me-1" style="color:#f85149"></i>PDF</a>
+    {% if can_edit %}
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalTransacao"><i class="fas fa-plus me-1"></i>Nova Transacao</button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3"><div class="stat-card card-dark"><div><div class="label" style="color:#3fb950;">Total Receitas</div><div class="value" style="color:#3fb950;font-size:1.4rem;">R$ {{ total_receitas|floatformat:2 }}</div></div></div></div>
+  <div class="col-md-3"><div class="stat-card card-dark"><div><div class="label" style="color:#f85149;">Total Despesas</div><div class="value" style="color:#f85149;font-size:1.4rem;">R$ {{ total_despesas|floatformat:2 }}</div></div></div></div>
+  <div class="col-md-3"><div class="stat-card card-dark"><div><div class="label" style="color:#e3b341;">A Receber</div><div class="value" style="color:#e3b341;font-size:1.4rem;">R$ {{ a_receber|floatformat:2 }}</div></div></div></div>
+  <div class="col-md-3"><div class="stat-card card-dark"><div><div class="label" style="color:#e3b341;">A Pagar</div><div class="value" style="color:#e3b341;font-size:1.4rem;">R$ {{ a_pagar|floatformat:2 }}</div></div></div></div>
+</div>
+
+{% if not can_edit %}
+<div class="alert alert-info mb-3" style="background:rgba(31,111,235,.1);border:1px solid rgba(31,111,235,.3);color:#79c0ff;">
+  <i class="fas fa-info-circle me-2"></i>Voce esta visualizando o financeiro em modo somente leitura. Apenas administradores podem criar ou editar transacoes.
+</div>
+{% endif %}
+
+<div class="filter-bar mb-3">
+  <form method="get" class="d-flex gap-3 align-items-end flex-wrap">
+    <div><label class="form-label mb-1">Tipo</label>
+      <select name="tipo" class="form-select" style="width:140px;">
+        <option value="">Todos</option>
+        <option value="receita" {% if tipo == 'receita' %}selected{% endif %}>Receita</option>
+        <option value="despesa" {% if tipo == 'despesa' %}selected{% endif %}>Despesa</option>
+      </select>
+    </div>
+    <div><label class="form-label mb-1">Status</label>
+      <select name="status" class="form-select" style="width:140px;">
+        <option value="">Todos</option>
+        <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendente</option>
+        <option value="pago" {% if status == 'pago' %}selected{% endif %}>Pago</option>
+        <option value="vencido" {% if status == 'vencido' %}selected{% endif %}>Vencido</option>
+        <option value="cancelado" {% if status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-primary-custom">Filtrar</button>
+    {% if tipo or status %}<a href="{% url 'financial:list' %}" class="btn-secondary-custom">Limpar</a>{% endif %}
+  </form>
+</div>
+
+<div class="section-box p-0">
+  <table class="data-table">
+    <thead><tr>
+      <th>Tipo</th><th>Descricao</th><th>Valor</th><th>Categoria</th><th>Vencimento</th><th>Status</th>
+      {% if can_edit %}<th>Acoes</th>{% endif %}
+    </tr></thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr>
+        <td><span class="badge-status {% if t.type == 'receita' %}badge-success{% else %}badge-danger{% endif %}">{{ t.get_type_display }}</span></td>
+        <td>
+          <div style="font-weight:500;">{{ t.description|truncatechars:42 }}</div>
+          {% if t.client %}<div style="font-size:.78rem;color:var(--text-muted);">{{ t.client.name }}</div>{% endif %}
+        </td>
+        <td style="font-weight:700;{% if t.type == 'receita' %}color:#3fb950{% else %}color:#f85149{% endif %};">R$ {{ t.value|floatformat:2 }}</td>
+        <td style="font-size:.85rem;">{{ t.category }}</td>
+        <td style="font-size:.85rem;">{{ t.due_date|date:"d/m/Y" }}</td>
+        <td>
+          <span class="badge-status
+            {% if t.status == 'pago' %}badge-success
+            {% elif t.status == 'vencido' %}badge-danger
+            {% elif t.status == 'pendente' %}badge-warning
+            {% else %}badge-secondary{% endif %}">{{ t.get_status_display }}</span>
+        </td>
+        {% if can_edit %}
+        <td>
+          <a href="{% url 'financial:edit' t.pk %}" class="btn-sm-action btn-edit"><i class="fas fa-edit"></i></a>
+          <a href="{% url 'financial:delete' t.pk %}" class="btn-sm-action btn-delete" onclick="return confirm('Excluir esta transacao?')"><i class="fas fa-trash"></i></a>
+        </td>
+        {% endif %}
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);">
+        <i class="fas fa-coins" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+        Nenhuma transacao encontrada
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if can_edit %}
+<div class="modal fade" id="modalTransacao" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-plus-circle me-2" style="color:var(--accent-orange)"></i>Nova Transacao</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'financial:create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Tipo</label>
+              <select name="type" class="form-select js-transaction-type"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></div>
+            <div class="col-md-6"><label class="form-label">Valor (R$)</label>
+              <input type="number" name="value" class="form-control" step="0.01" placeholder="0.00" required></div>
+            <div class="col-md-6"><label class="form-label">Categoria</label>
+              <select name="category" class="form-select js-transaction-category" data-current-category=""></select></div>
+            <div class="col-md-6 js-custom-category-wrap" style="display:none;">
+              <label class="form-label">Nova Categoria</label>
+              <input type="text" name="custom_category" class="form-control js-custom-category-input">
+            </div>
+            <div class="col-md-6"><label class="form-label">Data de Vencimento</label>
+              <input type="date" name="due_date" class="form-control" required></div>
+            <div class="col-md-6"><label class="form-label">Status</label>
+              <select name="status" class="form-select">
+                <option value="pendente">Pendente</option><option value="pago">Pago</option>
+                <option value="vencido">Vencido</option><option value="cancelado">Cancelado</option>
+              </select></div>
+            <div class="col-md-6"><label class="form-label">Data de Pagamento</label>
+              <input type="date" name="payment_date" class="form-control"></div>
+            <div class="col-12"><label class="form-label">Descricao</label>
+              <textarea name="description" class="form-control" rows="3" required></textarea></div>
+            <div class="col-12"><label class="form-label">Observacoes</label>
+              <textarea name="notes" class="form-control" rows="2"></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-primary-custom"><i class="fas fa-save me-1"></i>Salvar Transacao</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+const receitaCategories = [
+  {% for value, label in category_choices_receita %}{ value: "{{ value }}", label: "{{ label }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+];
+const despesaCategories = [
+  {% for value, label in category_choices_despesa %}{ value: "{{ value }}", label: "{{ label }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+];
+
+function setupTransactionCategory(container) {
+  const typeSelect = container.querySelector('.js-transaction-type');
+  const categorySelect = container.querySelector('.js-transaction-category');
+  const customWrap = container.querySelector('.js-custom-category-wrap');
+  const customInput = container.querySelector('.js-custom-category-input');
+  if (!typeSelect || !categorySelect || !customWrap || !customInput) return;
+
+  const renderOptions = () => {
+    const choices = typeSelect.value === 'despesa' ? despesaCategories : receitaCategories;
+    categorySelect.innerHTML = '';
+    choices.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.value;
+      option.textContent = item.label;
+      categorySelect.appendChild(option);
+    });
+    const otherOption = document.createElement('option');
+    otherOption.value = 'outro';
+    otherOption.textContent = 'Outro';
+    categorySelect.appendChild(otherOption);
+    syncCustomField();
+  };
+
+  const syncCustomField = () => {
+    const isOther = categorySelect.value === 'outro';
+    customWrap.style.display = isOther ? '' : 'none';
+    customInput.required = isOther;
+    if (!isOther) customInput.value = '';
+  };
+
+  typeSelect.addEventListener('change', renderOptions);
+  categorySelect.addEventListener('change', syncCustomField);
+  renderOptions();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('modalTransacao');
+  if (modal) setupTransactionCategory(modal);
+});
+</script>
+{% endblock %}

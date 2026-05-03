@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Concluir Tarefa{% endblock %}
+{% block nav_tasks %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-check-circle" style="color:#3fb950"></i>Marcar Tarefa como Concluída</div>
+  <a href="{% url 'tasks:list' %}" class="btn-secondary-custom"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
+</div>
+<div class="form-card" style="max-width:600px;">
+  <div style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.25);border-radius:10px;padding:20px;margin-bottom:24px;">
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">{{ task.title }}</div>
+    {% if task.client %}<div style="font-size:.85rem;color:var(--text-muted);">Cliente: {{ task.client.name }}</div>{% endif %}
+    <div style="font-size:.85rem;color:var(--text-muted);">Vencimento: {{ task.due_date|date:"d/m/Y" }}</div>
+    <div style="margin-top:10px;">
+      <span class="badge-status badge-{{ task.priority_color }}">{{ task.get_priority_display }}</span>
+    </div>
+  </div>
+
+  <div style="background:rgba(110,64,201,.08);border:1px solid rgba(110,64,201,.25);border-radius:10px;padding:16px;margin-bottom:24px;font-size:.88rem;">
+    <i class="fas fa-info-circle me-2" style="color:#bc8cff"></i>
+    Ao marcar como concluída, a tarefa ficará com status <strong>"Aguardando Validação"</strong> até que um administrador confirme.
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-4">
+      <label class="form-label">Nota de Conclusão (opcional)</label>
+      <textarea name="completion_note" class="form-control" rows="4" placeholder="Descreva o que foi feito, resultados obtidos, observações..."></textarea>
+    </div>
+    <div class="d-flex justify-content-end gap-2">
+      <a href="{% url 'tasks:list' %}" class="btn-secondary-custom">Cancelar</a>
+      <button type="submit" class="btn-primary-custom" style="background:#238636;">
+        <i class="fas fa-check me-1"></i>Confirmar Conclusão
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

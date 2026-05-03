@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block nav_financial %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-edit" style="color:var(--accent-orange)"></i>{{ title }}</div>
+  <a href="{% url 'financial:list' %}" class="btn-secondary-custom"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
+</div>
+<div class="form-card" style="max-width:700px;">
+  <form method="post">
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Tipo</label>
+        <select name="type" class="form-select js-transaction-type">
+          <option value="receita" {% if transaction.type == 'receita' %}selected{% endif %}>Receita</option>
+          <option value="despesa" {% if transaction.type == 'despesa' %}selected{% endif %}>Despesa</option>
+        </select></div>
+      <div class="col-md-6"><label class="form-label">Valor (R$)</label>
+        <input type="number" name="value" class="form-control" step="0.01" value="{{ transaction.value|default:'0.00' }}" required></div>
+      <div class="col-md-6"><label class="form-label">Categoria</label>
+        <select name="category" class="form-select js-transaction-category"
+                data-current-category="{{ transaction.category|default:'' }}">
+        </select></div>
+      <div class="col-md-6 js-custom-category-wrap" style="display:none;">
+        <label class="form-label">Nova Categoria</label>
+        <input type="text" name="custom_category" class="form-control js-custom-category-input">
+      </div>
+      <div class="col-md-6"><label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          {% for v, l in transaction.STATUS_CHOICES %}
+          <option value="{{ v }}" {% if transaction.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-6"><label class="form-label">Data de Vencimento</label>
+        <input type="date" name="due_date" class="form-control" value="{{ transaction.due_date|date:'Y-m-d'|default:'' }}" required></div>
+      <div class="col-md-6"><label class="form-label">Data de Pagamento</label>
+        <input type="date" name="payment_date" class="form-control" value="{{ transaction.payment_date|date:'Y-m-d'|default:'' }}"></div>
+      <div class="col-md-6"><label class="form-label">Cliente (Opcional)</label>
+        <select name="client" class="form-select">
+          <option value="">—</option>
+          {% for c in clients %}<option value="{{ c.pk }}" {% if transaction.client_id == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-6"><label class="form-label">Processo (Opcional)</label>
+        <select name="process" class="form-select">
+          <option value="">—</option>
+          {% for p in processes %}<option value="{{ p.pk }}" {% if transaction.process_id == p.pk %}selected{% endif %}>{{ p.number|default:'S/N' }} — {{ p.client.name }}</option>{% endfor %}
+        </select></div>
+      <div class="col-12"><label class="form-label">Descrição</label>
+        <textarea name="description" class="form-control" rows="3" required>{{ transaction.description|default:'' }}</textarea></div>
+      <div class="col-12"><label class="form-label">Observações</label>
+        <textarea name="notes" class="form-control" rows="2">{{ transaction.notes|default:'' }}</textarea></div>
+    </div>
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <a href="{% url 'financial:list' %}" class="btn-secondary-custom">Cancelar</a>
+      <button type="submit" class="btn-primary-custom"><i class="fas fa-save me-1"></i>Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const receitaCategories = [
+  {% for value, label in category_choices_receita %}{ value: "{{ value }}", label: "{{ label }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+];
+const despesaCategories = [
+  {% for value, label in category_choices_despesa %}{ value: "{{ value }}", label: "{{ label }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+];
+
+function setupTransactionCategory(container) {
+  const typeSelect = container.querySelector('.js-transaction-type');
+  const categorySelect = container.querySelector('.js-transaction-category');
+  const customWrap = container.querySelector('.js-custom-category-wrap');
+  const customInput = container.querySelector('.js-custom-category-input');
+  if (!typeSelect || !categorySelect || !customWrap || !customInput) return;
+
+  const currentCategory = categorySelect.dataset.currentCategory || '';
+  const knownValues = new Set([...receitaCategories, ...despesaCategories].map(item => item.value));
+
+  const renderOptions = () => {
+    const choices = typeSelect.value === 'despesa' ? despesaCategories : receitaCategories;
+    const selectedValue = categorySelect.value || currentCategory;
+    categorySelect.innerHTML = '';
+    choices.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.value;
+      option.textContent = item.label;
+      if (selectedValue === item.value) option.selected = true;
+      categorySelect.appendChild(option);
+    });
+
+    const otherOption = document.createElement('option');
+    otherOption.value = 'outro';
+    otherOption.textContent = 'Outro';
+    if (selectedValue && !knownValues.has(selectedValue)) {
+      otherOption.selected = true;
+      customInput.value = selectedValue;
+    }
+    categorySelect.appendChild(otherOption);
+    syncCustomField();
+  };
+
+  const syncCustomField = () => {
+    const isOther = categorySelect.value === 'outro';
+    customWrap.style.display = isOther ? '' : 'none';
+    customInput.required = isOther;
+    if (!isOther) customInput.value = '';
+  };
+
+  typeSelect.addEventListener('change', () => {
+    categorySelect.dataset.currentCategory = '';
+    renderOptions();
+  });
+  categorySelect.addEventListener('change', syncCustomField);
+  renderOptions();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  setupTransactionCategory(document);
+});
+</script>
+{% endblock %}

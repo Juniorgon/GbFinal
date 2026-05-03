@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Meu Perfil{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-user-circle" style="color:var(--accent-orange)"></i>Meu Perfil</div>
+</div>
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="form-card">
+      <div class="form-section-title">Informações Pessoais</div>
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Nome</label><input type="text" name="first_name" class="form-control" value="{{ user.first_name }}"></div>
+          <div class="col-md-6"><label class="form-label">Sobrenome</label><input type="text" name="last_name" class="form-control" value="{{ user.last_name }}"></div>
+          <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="{{ user.email }}"></div>
+          <div class="col-md-6"><label class="form-label">Telefone</label><input type="text" name="phone" class="form-control" value="{{ user.phone }}"></div>
+          <div class="col-12 text-end"><button type="submit" class="btn-primary-custom"><i class="fas fa-save me-1"></i>Salvar Perfil</button></div>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="form-card">
+      <div class="form-section-title"><i class="fas fa-shield-alt" style="color:var(--accent-purple)"></i>Segurança</div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px;">Autenticação 2FA</div>
+        {% if user.totp_enabled %}
+        <span class="badge-status badge-success"><i class="fas fa-check me-1"></i>Ativado</span>
+        {% else %}
+        <span class="badge-status badge-warning"><i class="fas fa-exclamation me-1"></i>Desativado</span>
+        {% endif %}
+      </div>
+      <a href="{% url 'accounts:twofa_setup' %}" class="btn-primary-custom" style="background:var(--accent-purple);display:block;text-align:center;">
+        <i class="fas fa-cog me-1"></i>{{ user.totp_enabled|yesno:"Gerenciar 2FA,Configurar 2FA" }}
+      </a>
+      <hr style="border-color:var(--border-color);margin:20px 0;">
+      <div style="font-size:.82rem;color:var(--text-muted);">
+        <div><strong>Usuário:</strong> {{ user.username }}</div>
+        <div><strong>Função:</strong> {{ user.get_role_display }}</div>
+        <div><strong>Filial:</strong> {{ user.branch.name|default:'—' }}</div>
+        <div><strong>Último login:</strong> {{ user.last_login|date:"d/m/Y H:i"|default:'—' }}</div>
+        {% if user.last_login_ip %}<div><strong>IP do último login:</strong> {{ user.last_login_ip }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

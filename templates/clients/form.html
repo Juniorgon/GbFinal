@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block nav_clients %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-user-edit" style="color:var(--accent-orange)"></i>{{ title }}</div>
+  <a href="{% url 'clients:list' %}" class="btn-secondary-custom text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
+</div>
+<div class="form-card">
+  <form method="post">
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label">Nome Completo</label>
+        <input type="text" name="name" class="form-control" value="{{ client.name|default:'' }}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Tipo</label>
+        <select name="type" class="form-select">
+          <option value="fisica" {% if client.type == 'fisica' %}selected{% endif %}>Pessoa Física</option>
+          <option value="juridica" {% if client.type == 'juridica' %}selected{% endif %}>Pessoa Jurídica</option>
+        </select>
+      </div>
+      <div class="col-md-4"><label class="form-label">Nacionalidade</label>
+        <input type="text" name="nationality" class="form-control" value="{{ client.nationality|default:'Brasileira' }}">
+      </div>
+      <div class="col-md-4"><label class="form-label">Estado Civil</label>
+        <input type="text" name="marital_status" class="form-control" value="{{ client.marital_status|default:'' }}">
+      </div>
+      <div class="col-md-4"><label class="form-label">Profissão</label>
+        <input type="text" name="profession" class="form-control" value="{{ client.profession|default:'' }}">
+      </div>
+      <div class="col-md-4"><label class="form-label">CPF/CNPJ</label>
+        <input type="text" name="cpf_cnpj" class="form-control" value="{{ client.cpf_cnpj|default:'' }}" placeholder="000.000.000-00" inputmode="numeric">
+      </div>
+      <div class="col-md-4"><label class="form-label">Telefone *</label>
+        <input type="text" name="phone" class="form-control" value="{{ client.phone|default:'' }}" required>
+      </div>
+      <div class="col-md-5"><label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control" value="{{ client.email|default:'' }}">
+      </div>
+      <div class="col-md-3"><label class="form-label">Data de Nascimento</label>
+        <input type="date" name="birth_date" class="form-control" value="{{ client.birth_date|date:'Y-m-d'|default:'' }}">
+      </div>
+      <div class="col-12"><hr style="border-color:var(--border-color);"><h6>Endereço</h6></div>
+      <div class="col-md-8"><label class="form-label">Rua</label>
+        <input type="text" name="street" class="form-control" value="{{ client.street|default:'' }}">
+      </div>
+      <div class="col-md-4"><label class="form-label">Número</label>
+        <input type="text" name="number" class="form-control" value="{{ client.number|default:'' }}">
+      </div>
+      <div class="col-md-4"><label class="form-label">Cidade</label>
+        <input type="text" name="city" class="form-control" value="{{ client.city|default:'' }}">
+      </div>
+      <div class="col-md-4"><label class="form-label">Bairro</label>
+        <input type="text" name="district" class="form-control" value="{{ client.district|default:'' }}">
+      </div>
+      <div class="col-md-2"><label class="form-label">Estado</label>
+        <input type="text" name="state" class="form-control" value="{{ client.state|default:'' }}" maxlength="2">
+      </div>
+      <div class="col-md-2"><label class="form-label">CEP</label>
+        <input type="text" name="zipcode" class="form-control" value="{{ client.zipcode|default:'' }}">
+      </div>
+      <div class="col-md-6"><label class="form-label">Complemento</label>
+        <input type="text" name="complement" class="form-control" value="{{ client.complement|default:'' }}">
+      </div>
+      <div class="col-12"><label class="form-label">Observações</label>
+        <textarea name="notes" class="form-control" rows="3">{{ client.notes|default:'' }}</textarea>
+      </div>
+    </div>
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <a href="{% url 'clients:list' %}" class="btn-secondary-custom text-decoration-none">Cancelar</a>
+      <button type="submit" class="btn-primary-custom"><i class="fas fa-save me-1"></i>Salvar Cliente</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function formatCpfCnpj(value, personType) {
+  const digits = value.replace(/\D/g, "");
+  if (personType === "juridica") {
+    return digits
+      .slice(0, 14)
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return digits
+    .slice(0, 11)
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+}
+
+function setupCpfCnpjMask(form) {
+  const typeField = form.querySelector('[name="type"]');
+  const documentField = form.querySelector('[name="cpf_cnpj"]');
+  if (!typeField || !documentField) {
+    return;
+  }
+
+  const applyMask = () => {
+    const isJuridica = typeField.value === "juridica";
+    documentField.placeholder = isJuridica ? "00.000.000/0000-00" : "000.000.000-00";
+    documentField.maxLength = isJuridica ? 18 : 14;
+    documentField.value = formatCpfCnpj(documentField.value, typeField.value);
+  };
+
+  typeField.addEventListener("change", applyMask);
+  documentField.addEventListener("input", applyMask);
+  applyMask();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("form").forEach(setupCpfCnpjMask);
+});
+</script>
+{% endblock %}

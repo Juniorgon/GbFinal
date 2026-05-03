@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}{{ client.name }}{% endblock %}
+{% block nav_clients %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title"><i class="fas fa-user" style="color:var(--accent-orange)"></i>{{ client.name }}</div>
+    <div class="page-subtitle">{{ client.type_display_short }} — {{ client.city_state }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'clients:procuracao' client.pk %}" class="btn-blue"><i class="fas fa-file-pdf me-1"></i>Procuração</a>
+    <a href="{% url 'clients:edit' client.pk %}" class="btn-primary-custom"><i class="fas fa-edit me-1"></i>Editar</a>
+    <a href="{% url 'clients:list' %}" class="btn-secondary-custom"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="section-box">
+      <div class="form-section-title">Dados Pessoais</div>
+      <div style="display:grid;gap:12px;font-size:.9rem;">
+        <div><span style="color:var(--text-muted);">CPF/CNPJ:</span> <strong>{{ client.cpf_cnpj|default:'—' }}</strong></div>
+        {% if client.nationality %}<div><span style="color:var(--text-muted);">Nacionalidade:</span> <strong>{{ client.nationality }}</strong></div>{% endif %}
+        {% if client.marital_status %}<div><span style="color:var(--text-muted);">Estado Civil:</span> <strong>{{ client.marital_status }}</strong></div>{% endif %}
+        {% if client.profession %}<div><span style="color:var(--text-muted);">Profissão:</span> <strong>{{ client.profession }}</strong></div>{% endif %}
+        {% if client.birth_date %}<div><span style="color:var(--text-muted);">Nascimento:</span> <strong>{{ client.birth_date|date:"d/m/Y" }}</strong></div>{% endif %}
+      </div>
+      <hr style="border-color:var(--border-color);margin:16px 0;">
+      <div class="form-section-title">Contato</div>
+      <div style="display:grid;gap:10px;font-size:.9rem;">
+        <div><i class="fas fa-phone me-2" style="color:var(--accent-orange)"></i><strong>{{ client.phone }}</strong></div>
+        {% if client.email %}<div><i class="fas fa-envelope me-2" style="color:var(--accent-orange)"></i>{{ client.email }}</div>{% endif %}
+      </div>
+      {% if client.street %}
+      <hr style="border-color:var(--border-color);margin:16px 0;">
+      <div class="form-section-title">Endereço</div>
+      <div style="font-size:.88rem;color:var(--text-muted);line-height:1.7;">
+        {{ client.street }}{% if client.number %}, {{ client.number }}{% endif %}{% if client.complement %} — {{ client.complement }}{% endif %}<br>
+        {% if client.district %}{{ client.district }} — {% endif %}{{ client.city }}/{{ client.state }}{% if client.zipcode %} — CEP {{ client.zipcode }}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="section-box">
+      <div class="form-section-title">Processos ({{ processes.count }})</div>
+      {% for p in processes %}
+      <div style="border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:600;font-family:monospace;font-size:.88rem;">{{ p.number|default:'S/N' }}</div>
+            <div style="font-size:.82rem;color:var(--text-muted);">{{ p.type_label }}</div>
+          </div>
+          <div style="text-align:right;">
+            <span class="badge-status badge-{{ p.status_color }}">{{ p.get_status_display }}</span>
+            <div style="font-size:.82rem;color:#3fb950;margin-top:4px;">R$ {{ p.value|floatformat:2 }}</div>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div style="text-align:center;color:var(--text-muted);padding:24px;font-size:.9rem;">Nenhum processo vinculado</div>
+      {% endfor %}
+    </div>
+    {% if client.notes %}
+    <div class="section-box">
+      <div class="form-section-title">Observações</div>
+      <div style="color:var(--text-muted);font-size:.9rem;line-height:1.7;">{{ client.notes }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

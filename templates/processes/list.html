@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% block title %}Processos{% endblock %}
+{% block nav_processes %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-balance-scale" style="color:var(--accent-orange)"></i>Gestão de Processos</div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'processes:export_pdf' %}" class="btn btn-sm" style="background:#c0392b;color:#fff;border-radius:8px;padding:8px 14px;font-weight:600;text-decoration:none;"><i class="fas fa-file-pdf me-1"></i>PDF</a>
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#processModal"><i class="fas fa-plus me-1"></i>Novo Processo</button>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-3">
+  {% for label, val, color in forloop.parentloop|default:'' %}{% endfor %}
+  <div class="col-md-2"><div class="stat-card card-dark" style="flex-direction:column;align-items:flex-start;gap:4px;"><div class="label">Total Processos</div><div class="value">{{ total }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card card-dark" style="flex-direction:column;align-items:flex-start;gap:4px;"><div class="label" style="color:#e3b341;">Em Andamento</div><div class="value" style="color:#e3b341;">{{ andamento }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card card-dark" style="flex-direction:column;align-items:flex-start;gap:4px;"><div class="label" style="color:#3fb950;">Concluídos</div><div class="value" style="color:#3fb950;">{{ concluidos }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card card-dark" style="flex-direction:column;align-items:flex-start;gap:4px;"><div class="label" style="color:#f85149;">Suspensos</div><div class="value" style="color:#f85149;">{{ suspensos }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card card-dark" style="flex-direction:column;align-items:flex-start;gap:4px;"><div class="label" style="color:#79c0ff;">Valor Total</div><div class="value" style="font-size:1.1rem;color:#79c0ff;">R$ {{ valor_total|floatformat:2 }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card card-dark" style="flex-direction:column;align-items:flex-start;gap:4px;"><div class="label" style="color:#bc8cff;">Valor Médio</div><div class="value" style="font-size:1.1rem;color:#bc8cff;">R$ {{ valor_medio|floatformat:2 }}</div></div></div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar mb-3">
+  <form method="get" class="d-flex gap-3 align-items-end flex-wrap">
+    <div>
+      <label class="form-label mb-1">Status</label>
+      <select name="status" class="form-select" style="width:150px;">
+        <option value="">Todos</option>
+        <option value="andamento" {% if status == 'andamento' %}selected{% endif %}>Em Andamento</option>
+        <option value="concluido" {% if status == 'concluido' %}selected{% endif %}>Concluído</option>
+        <option value="suspenso" {% if status == 'suspenso' %}selected{% endif %}>Suspenso</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label mb-1">Tipo</label>
+      <select name="tipo" class="form-select" style="width:150px;">
+        <option value="">Todos</option>
+        <option value="civil" {% if tipo == 'civil' %}selected{% endif %}>Cível</option>
+        <option value="trabalhista" {% if tipo == 'trabalhista' %}selected{% endif %}>Trabalhista</option>
+        <option value="criminal" {% if tipo == 'criminal' %}selected{% endif %}>Criminal</option>
+        <option value="familia" {% if tipo == 'familia' %}selected{% endif %}>Família</option>
+        <option value="previdenciario" {% if tipo == 'previdenciario' %}selected{% endif %}>Previdenciário</option>
+        <option value="tributario" {% if tipo == 'tributario' %}selected{% endif %}>Tributário</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label mb-1">Cliente</label>
+      <select name="cliente" class="form-select" style="width:200px;">
+        <option value="">Todos</option>
+        {% for c in clients %}<option value="{{ c.pk }}" {% if cliente == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-primary-custom">Filtrar</button>
+    {% if status or tipo or cliente %}<a href="{% url 'processes:list' %}" class="btn-secondary-custom text-decoration-none">Limpar</a>{% endif %}
+  </form>
+</div>
+
+<div class="section-box p-0">
+  <table class="data-table">
+    <thead><tr>
+      <th>Processo</th><th>Cliente</th><th>Tipo</th><th>Status</th><th>Valor</th><th>Posição</th><th>Ações</th>
+    </tr></thead>
+    <tbody>
+      {% for p in processes %}
+      <tr>
+        <td>
+          <div style="font-weight:600;font-family:monospace;font-size:.85rem;">{{ p.number|default:'S/N' }}</div>
+          {% if p.court %}<div style="font-size:.78rem;color:var(--text-muted);">{{ p.court|truncatechars:30 }}</div>{% endif %}
+        </td>
+        <td style="font-weight:500;">{{ p.client.name }}</td>
+        <td>{{ p.type_label }}</td>
+        <td><span class="badge-status badge-{{ p.status_color }}">{{ p.get_status_display }}</span></td>
+        <td style="color:#3fb950;font-weight:600;">R$ {{ p.value|floatformat:2 }}</td>
+        <td style="font-size:.82rem;">{{ p.get_client_position_display }}</td>
+        <td>
+          <a href="{% url 'processes:detail' p.pk %}" class="btn-sm-action btn-edit"><i class="fas fa-eye me-1"></i>Ver</a>
+          <a href="{% url 'processes:edit' p.pk %}" class="btn-sm-action btn-edit"><i class="fas fa-edit me-1"></i>Editar</a>
+          <a href="{% url 'processes:delete' p.pk %}" class="btn-sm-action btn-delete" onclick="return confirm('Excluir processo?')"><i class="fas fa-trash"></i></a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);">
+        <i class="fas fa-balance-scale" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>Nenhum processo encontrado
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal New Process -->
+<div class="modal fade" id="processModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-balance-scale me-2" style="color:var(--accent-orange)"></i>Novo Processo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'processes:create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Cliente</label>
+              <select name="client" class="form-select" required>
+                <option value="">Selecione um cliente...</option>
+                {% for c in clients %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Número do Processo</label>
+              <input type="text" name="number" id="processNumber" class="form-control" placeholder="Ex: 1234567-89.2024.8.26.0100">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              <button type="button" class="btn-blue w-100" onclick="gerarNumero()" style="padding:10px 8px;">Gerar</button>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tipo do Processo</label>
+              <select name="type" class="form-select js-type-select" required>
+                <option value="">Selecione o tipo...</option>
+                {% for val, label in type_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6 js-custom-type-wrap" style="display:none;">
+              <label class="form-label">Novo Tipo de Processo</label>
+              <input type="text" name="custom_type" class="form-control js-custom-type-input">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Status</label>
+              <select name="status" class="form-select">
+                {% for val, label in status_choices %}<option value="{{ val }}" {% if val == 'andamento' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Valor da Causa</label>
+              <input type="number" name="value" class="form-control" value="0.00" step="0.01">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Posição do Cliente</label>
+              <select name="client_position" class="form-select">
+                {% for val, label in position_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label"><i class="fas fa-user-tie me-1" style="color:var(--accent-orange)"></i>Advogado Responsável</label>
+              <select name="lawyer" class="form-select">
+                <option value="">Selecione um advogado (opcional)...</option>
+                {% for l in lawyers %}<option value="{{ l.pk }}">{{ l.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Vara/Tribunal</label>
+              <input type="text" name="court" class="form-control">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Parte Contrária</label>
+              <input type="text" name="opposing_party" class="form-control">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Descrição</label>
+              <textarea name="description" class="form-control" rows="3" placeholder="Descreva o processo..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-primary-custom"><i class="fas fa-save me-1"></i>Salvar Processo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function gerarNumero() {
+  fetch("{% url 'processes:generate_number' %}")
+    .then(r => r.text()).then(n => { document.getElementById('processNumber').value = n; });
+}
+
+function setupCustomType(container) {
+  const select = container.querySelector('.js-type-select');
+  const wrap = container.querySelector('.js-custom-type-wrap');
+  const input = container.querySelector('.js-custom-type-input');
+  if (!select || !wrap || !input) return;
+
+  const sync = () => {
+    const isOther = select.value === 'outro';
+    wrap.style.display = isOther ? '' : 'none';
+    input.required = isOther;
+    if (!isOther) input.value = '';
+  };
+
+  select.addEventListener('change', sync);
+  sync();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('processModal');
+  if (modal) setupCustomType(modal);
+});
+</script>
+{% endblock %}

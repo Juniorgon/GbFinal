@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block nav_processes %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-balance-scale" style="color:var(--accent-orange)"></i>{{ title }}</div>
+  <a href="{% url 'processes:list' %}" class="btn-secondary-custom text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
+</div>
+<div class="form-card">
+  <form method="post">
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Cliente</label>
+        <select name="client" class="form-select" required>
+          {% for c in clients %}<option value="{{ c.pk }}" {% if process.client_id == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5"><label class="form-label">Número do Processo</label>
+        <input type="text" name="number" class="form-control" value="{{ process.number|default:'' }}" id="processNumber">
+      </div>
+      <div class="col-md-1 d-flex align-items-end">
+        <button type="button" class="btn-blue w-100" onclick="gerarNumero()" style="padding:10px 6px;">Gerar</button>
+      </div>
+      <div class="col-md-6"><label class="form-label">Tipo do Processo</label>
+        <select name="type" class="form-select js-type-select" required>
+          {% for val, label in type_choices %}<option value="{{ val }}" {% if process.type == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6 js-custom-type-wrap" {% if process.type != 'outro' %}style="display:none;"{% endif %}>
+        <label class="form-label">Novo Tipo de Processo</label>
+        <input type="text" name="custom_type" class="form-control js-custom-type-input" value="{{ process.custom_type|default:'' }}">
+      </div>
+      <div class="col-md-6"><label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          {% for val, label in status_choices %}<option value="{{ val }}" {% if process.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6"><label class="form-label">Valor da Causa</label>
+        <input type="number" name="value" class="form-control" value="{{ process.value|default:'0.00' }}" step="0.01">
+      </div>
+      <div class="col-md-6"><label class="form-label">Posição do Cliente</label>
+        <select name="client_position" class="form-select">
+          {% for val, label in position_choices %}<option value="{{ val }}" {% if process.client_position == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6"><label class="form-label">Advogado Responsável</label>
+        <select name="lawyer" class="form-select">
+          <option value="">Selecione (opcional)...</option>
+          {% for l in lawyers %}<option value="{{ l.pk }}" {% if process.lawyer_id == l.pk %}selected{% endif %}>{{ l.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6"><label class="form-label">Vara/Tribunal</label>
+        <input type="text" name="court" class="form-control" value="{{ process.court|default:'' }}">
+      </div>
+      <div class="col-12"><label class="form-label">Parte Contrária</label>
+        <input type="text" name="opposing_party" class="form-control" value="{{ process.opposing_party|default:'' }}">
+      </div>
+      <div class="col-12"><label class="form-label">Descrição</label>
+        <textarea name="description" class="form-control" rows="4">{{ process.description|default:'' }}</textarea>
+      </div>
+      <div class="col-12"><label class="form-label">Observações</label>
+        <textarea name="notes" class="form-control" rows="3">{{ process.notes|default:'' }}</textarea>
+      </div>
+    </div>
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <a href="{% url 'processes:list' %}" class="btn-secondary-custom text-decoration-none">Cancelar</a>
+      <button type="submit" class="btn-primary-custom"><i class="fas fa-save me-1"></i>Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function gerarNumero() {
+  fetch("{% url 'processes:generate_number' %}")
+    .then(r => r.text()).then(n => { document.getElementById('processNumber').value = n; });
+}
+
+function setupCustomType(container) {
+  const select = container.querySelector('.js-type-select');
+  const wrap = container.querySelector('.js-custom-type-wrap');
+  const input = container.querySelector('.js-custom-type-input');
+  if (!select || !wrap || !input) return;
+
+  const sync = () => {
+    const isOther = select.value === 'outro';
+    wrap.style.display = isOther ? '' : 'none';
+    input.required = isOther;
+    if (!isOther) input.value = '';
+  };
+
+  select.addEventListener('change', sync);
+  sync();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  setupCustomType(document);
+});
+</script>
+{% endblock %}

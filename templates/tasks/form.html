@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block nav_tasks %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-edit" style="color:var(--accent-orange)"></i>{{ title }}</div>
+  <a href="{% url 'tasks:list' %}" class="btn-secondary-custom"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
+</div>
+<div class="form-card" style="max-width:700px;">
+  <form method="post">
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-12"><label class="form-label">Título</label>
+        <input type="text" name="title" class="form-control" value="{{ task.title|default:'' }}" required></div>
+      <div class="col-12"><label class="form-label">Descrição</label>
+        <textarea name="description" class="form-control" rows="4">{{ task.description|default:'' }}</textarea></div>
+      <div class="col-md-6"><label class="form-label">Data de Vencimento</label>
+        <input type="date" name="due_date" class="form-control" value="{{ task.due_date|date:'Y-m-d'|default:'' }}" required></div>
+      <div class="col-md-6"><label class="form-label">Prioridade</label>
+        <select name="priority" class="form-select">
+          {% for v, l in priority_choices %}<option value="{{ v }}" {% if task.priority == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-6"><label class="form-label">Tipo</label>
+        <select name="type" class="form-select js-type-select">
+          {% for v, l in type_choices %}<option value="{{ v }}" {% if task.type == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-6 js-custom-type-wrap" {% if task.type != 'outro' %}style="display:none;"{% endif %}>
+        <label class="form-label">Novo Tipo de Tarefa</label>
+        <input type="text" name="custom_type" class="form-control js-custom-type-input" value="{{ task.custom_type|default:'' }}">
+      </div>
+      {% if user_is_admin %}
+      <div class="col-md-6"><label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          {% for v, l in status_choices %}<option value="{{ v }}" {% if task.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-6"><label class="form-label">Advogado Responsável</label>
+        <select name="assigned_to" class="form-select">
+          <option value="">—</option>
+          {% for l in lawyers %}<option value="{{ l.pk }}" {% if task.assigned_to_id == l.pk %}selected{% endif %}>{{ l.name }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-6"><label class="form-label">Cliente</label>
+        <select name="client" class="form-select">
+          <option value="">—</option>
+          {% for c in clients %}<option value="{{ c.pk }}" {% if task.client_id == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select></div>
+      {% else %}
+      <div class="col-md-6"><label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="pendente" {% if task.status == 'pendente' %}selected{% endif %}>Pendente</option>
+          <option value="andamento" {% if task.status == 'andamento' %}selected{% endif %}>Em Andamento</option>
+        </select></div>
+        <div class="col-md-6">
+          <div style="background:rgba(110,64,201,.1);border:1px solid rgba(110,64,201,.3);border-radius:8px;padding:12px;font-size:.82rem;">
+            <i class="fas fa-info-circle me-1" style="color:#bc8cff"></i>
+            Para concluir, use o botão "✓" na lista de tarefas. A conclusão aguardará validação do administrador.
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <a href="{% url 'tasks:list' %}" class="btn-secondary-custom">Cancelar</a>
+      <button type="submit" class="btn-primary-custom"><i class="fas fa-save me-1"></i>Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function setupTaskCustomType(container) {
+  const select = container.querySelector('.js-type-select');
+  const wrap = container.querySelector('.js-custom-type-wrap');
+  const input = container.querySelector('.js-custom-type-input');
+  if (!select || !wrap || !input) return;
+
+  const sync = () => {
+    const isOther = select.value === 'outro';
+    wrap.style.display = isOther ? '' : 'none';
+    input.required = isOther;
+    if (!isOther) input.value = '';
+  };
+
+  select.addEventListener('change', sync);
+  sync();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  setupTaskCustomType(document);
+});
+</script>
+{% endblock %}

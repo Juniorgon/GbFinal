@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Processo {{ process.number }}{% endblock %}
+{% block nav_processes %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title"><i class="fas fa-file-alt" style="color:var(--accent-orange)"></i>{{ process.number|default:'Processo S/N' }}</div>
+    <div class="page-subtitle">{{ process.client.name }} - {{ process.type_label }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'processes:edit' process.pk %}" class="btn-primary-custom text-decoration-none"><i class="fas fa-edit me-1"></i>Editar</a>
+    <a href="{% url 'processes:list' %}" class="btn-secondary-custom text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-8">
+    <div class="section-box">
+      <div class="form-section-title">Informacoes do Processo</div>
+      <div class="row g-3">
+        <div class="col-md-6"><div class="form-label">Cliente</div><div style="font-weight:600;">{{ process.client.name }}</div></div>
+        <div class="col-md-6"><div class="form-label">Numero</div><div style="font-family:monospace;">{{ process.number|default:'S/N' }}</div></div>
+        <div class="col-md-6"><div class="form-label">Tipo</div><div>{{ process.type_label }}</div></div>
+        <div class="col-md-6"><div class="form-label">Status</div><span class="badge-status badge-{{ process.status_color }}">{{ process.get_status_display }}</span></div>
+        <div class="col-md-6"><div class="form-label">Valor da Causa</div><div style="color:#3fb950;font-weight:700;">R$ {{ process.value|floatformat:2 }}</div></div>
+        <div class="col-md-6"><div class="form-label">Posicao do Cliente</div><div>{{ process.get_client_position_display }}</div></div>
+        {% if process.court %}<div class="col-md-6"><div class="form-label">Vara/Tribunal</div><div>{{ process.court }}</div></div>{% endif %}
+        {% if process.opposing_party %}<div class="col-md-6"><div class="form-label">Parte Contraria</div><div>{{ process.opposing_party }}</div></div>{% endif %}
+        {% if process.lawyer %}<div class="col-md-6"><div class="form-label">Advogado Responsavel</div><div>{{ process.lawyer.name }}</div></div>{% endif %}
+        {% if process.description %}<div class="col-12"><div class="form-label">Descricao</div><div style="color:var(--text-muted);">{{ process.description }}</div></div>{% endif %}
+      </div>
+    </div>
+    <div class="section-box">
+      <div class="form-section-title">Andamentos do Processo</div>
+      {% for u in updates %}
+      <div style="border-left:3px solid var(--accent-orange);padding:12px 16px;margin-bottom:12px;background:rgba(255,255,255,.02);border-radius:0 8px 8px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-weight:600;">{{ u.title }}</div>
+          <div style="font-size:.8rem;color:var(--text-muted);">{{ u.date|date:"d/m/Y" }}</div>
+        </div>
+        <div style="color:var(--text-muted);font-size:.9rem;">{{ u.description }}</div>
+      </div>
+      {% empty %}
+      <div style="text-align:center;color:var(--text-muted);padding:24px;">Nenhum andamento registrado</div>
+      {% endfor %}
+      <hr style="border-color:var(--border-color);">
+      <div style="font-weight:600;margin-bottom:12px;">Adicionar Andamento</div>
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-2">
+          <div class="col-md-8"><input type="text" name="update_title" class="form-control" placeholder="Titulo do andamento" required></div>
+          <div class="col-md-4"><input type="date" name="update_date" class="form-control" required></div>
+          <div class="col-12"><textarea name="update_description" class="form-control" rows="2" placeholder="Descricao..." required></textarea></div>
+          <div class="col-12 text-end"><button type="submit" class="btn-primary-custom"><i class="fas fa-plus me-1"></i>Adicionar</button></div>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="section-box">
+      <div class="form-section-title">Transacoes</div>
+      {% for tr in process.transactions.all %}
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">
+        <div style="font-size:.85rem;">{{ tr.description|truncatechars:25 }}</div>
+        <div style="font-weight:600;{% if tr.type == 'receita' %}color:#3fb950{% else %}color:#f85149{% endif %};">R$ {{ tr.value|floatformat:2 }}</div>
+      </div>
+      {% empty %}<div style="color:var(--text-muted);font-size:.85rem;">Nenhuma transacao</div>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - GB & N.Comin Advocacia{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title">Dashboard - GB & N.Comin Advocacia</div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <div class="btn-group" role="group">
+      <a href="?period=semana" class="btn btn-sm {% if period == 'semana' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">Semana</a>
+      <a href="?period=mes" class="btn btn-sm {% if period == 'mes' or not period %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">Mês</a>
+      <a href="?period=ano" class="btn btn-sm {% if period == 'ano' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">Ano</a>
+    </div>
+    <a href="{% url 'clients:export_pdf' %}" class="btn btn-sm" style="background:#c0392b;color:#fff;border-radius:8px;padding:8px 14px;font-weight:600;text-decoration:none;"><i class="fas fa-file-pdf me-1"></i>PDF</a>
+  </div>
+</div>
+
+<!-- Row 1: Main stats -->
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="stat-card card-blue">
+      <div>
+        <div class="label">Total Clientes</div>
+        <div class="value">{{ total_clients }}</div>
+        <div style="font-size:.8rem;opacity:.8;margin-top:4px;">Ativos no sistema</div>
+      </div>
+      <div class="icon"><i class="fas fa-users"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card card-purple">
+      <div>
+        <div class="label">Total Processos</div>
+        <div class="value">{{ total_processes }}</div>
+        <div style="font-size:.8rem;opacity:.8;margin-top:4px;">Em acompanhamento</div>
+      </div>
+      <div class="icon"><i class="fas fa-balance-scale"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card card-green">
+      <div>
+        <div class="label">Receita Total</div>
+        <div class="value" style="font-size:1.5rem;">R$ {{ receita_total|floatformat:2 }}</div>
+        <div style="font-size:.8rem;opacity:.8;margin-top:4px;">Acumulado</div>
+      </div>
+      <div class="icon"><i class="fas fa-chart-line"></i></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card card-red">
+      <div>
+        <div class="label">Despesas Total</div>
+        <div class="value" style="font-size:1.5rem;">R$ {{ despesa_total|floatformat:2 }}</div>
+        <div style="font-size:.8rem;opacity:.8;margin-top:4px;">Acumulado</div>
+      </div>
+      <div class="icon"><i class="fas fa-chart-line" style="transform:scaleY(-1)"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: Secondary stats -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card" style="background:var(--bg-card);border:2px solid #d4a017;">
+      <div>
+        <div class="label" style="color:#e3b341;">Pagamentos Pendentes</div>
+        <div class="value" style="color:#e3b341;">{{ pag_pendentes }}</div>
+      </div>
+      <div style="font-size:2rem;">⏳</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="background:var(--bg-card);border:2px solid #da3633;">
+      <div>
+        <div class="label" style="color:#f85149;">Pagamentos Vencidos</div>
+        <div class="value" style="color:#f85149;">{{ pag_vencidos }}</div>
+      </div>
+      <div style="font-size:2rem;">🚨</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="background:var(--bg-card);border:1px solid var(--border-color);">
+      <div>
+        <div class="label">Receita Mensal</div>
+        <div class="value" style="color:#3fb950;font-size:1.4rem;">R$ {{ receita_mensal|floatformat:2 }}</div>
+      </div>
+      <div style="font-size:2rem;">📊</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card" style="background:var(--bg-card);border:1px solid var(--border-color);">
+      <div>
+        <div class="label">Despesas Mensais</div>
+        <div class="value" style="color:#f85149;font-size:1.4rem;">R$ {{ despesa_mensal|floatformat:2 }}</div>
+      </div>
+      <div style="font-size:2rem;">📊</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+  <div class="col-md-7">
+    <div class="section-box">
+      <div style="font-weight:700;margin-bottom:16px;font-size:1rem;">Receitas vs Despesas</div>
+      <div style="position:relative;height:220px;">
+        <canvas id="chartFinanceiro"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="section-box">
+      <div style="font-weight:700;margin-bottom:16px;font-size:1rem;">Status dos Processos</div>
+      <div style="position:relative;height:220px;">
+        <canvas id="chartProcessos"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent tasks -->
+<div class="section-box">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div style="font-weight:700;font-size:1rem;"><i class="fas fa-tasks me-2" style="color:var(--accent-orange)"></i>Tarefas Pendentes</div>
+    <a href="{% url 'tasks:list' %}" style="color:var(--accent-orange);text-decoration:none;font-size:.85rem;">Ver todas →</a>
+  </div>
+  {% if recent_tasks %}
+  <table class="data-table">
+    <thead><tr>
+      <th>Tarefa</th><th>Vencimento</th><th>Prioridade</th><th>Cliente</th>
+    </tr></thead>
+    <tbody>
+      {% for task in recent_tasks %}
+      <tr>
+        <td><div style="font-weight:600;">{{ task.title }}</div></td>
+        <td>{{ task.due_date|date:"d/m/Y" }}</td>
+        <td><span class="badge-status badge-{{ task.priority_color }}">{{ task.get_priority_display }}</span></td>
+        <td>{{ task.client.name|default:'-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;color:var(--text-muted);padding:32px;">
+    <i class="fas fa-check-circle" style="font-size:2rem;margin-bottom:8px;color:#3fb950;display:block;"></i>
+    Nenhuma tarefa pendente
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const labels = {{ chart_labels|safe }};
+const receitas = {{ chart_receitas|safe }};
+const despesas = {{ chart_despesas|safe }};
+Chart.defaults.color = '#8b949e';
+new Chart(document.getElementById('chartFinanceiro'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      { label: 'Receitas', data: receitas, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,.1)', tension: .4, fill: true },
+      { label: 'Despesas', data: despesas, borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,.1)', tension: .4, fill: true }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { x: { grid: { color: '#21262d' } }, y: { grid: { color: '#21262d' }, ticks: { callback: v => 'R$ ' + v.toFixed(0) } } } }
+});
+new Chart(document.getElementById('chartProcessos'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Em Andamento', 'Concluídos', 'Suspensos'],
+    datasets: [{ data: [{{ proc_andamento }}, {{ proc_concluido }}, {{ proc_suspenso }}], backgroundColor: ['#e3b341', '#3fb950', '#f85149'], borderWidth: 0 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '65%' }
+});
+</script>
+{% endblock %}

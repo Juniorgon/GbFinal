@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}Minha Agenda{% endblock %}
+{% block nav_agenda %}active{% endblock %}
+{% block extra_css %}
+<style>
+.agenda-header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px;}
+.agenda-title-wrap{display:flex;align-items:flex-start;gap:12px;}
+.agenda-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#58a6ff,#bc8cff);display:flex;align-items:center;justify-content:center;color:#fff;}
+.agenda-title{font-size:1.65rem;font-weight:800;line-height:1.1;}
+.agenda-subtitle{color:var(--text-muted);font-size:.92rem;margin-top:6px;}
+.agenda-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.agenda-range{display:flex;gap:8px;}
+.agenda-nav-btn{background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;min-width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;}
+.agenda-nav-btn:hover{color:#fff;border-color:var(--accent-orange);}
+.agenda-date-input{height:42px;min-width:165px;}
+.agenda-grid{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:16px;margin-bottom:24px;}
+.agenda-day{background:#1b2431;border:1px solid rgba(255,255,255,.04);border-radius:8px;min-height:300px;padding:18px 12px;display:flex;flex-direction:column;}
+.agenda-day.today{border:2px solid var(--accent-orange);}
+.agenda-day-head{text-align:center;margin-bottom:18px;}
+.agenda-weekday{color:#b7c8dd;font-size:.84rem;}
+.agenda-day-number{font-size:1.25rem;font-weight:800;color:#fff;line-height:1.1;}
+.agenda-month{color:#b7c8dd;font-size:.78rem;}
+.agenda-items{display:flex;flex-direction:column;gap:8px;min-height:180px;}
+.agenda-empty{color:#7d8796;text-align:center;font-size:.78rem;margin-top:22px;}
+.agenda-item{border-radius:8px;padding:9px 10px;font-size:.78rem;line-height:1.35;border:1px solid rgba(255,255,255,.08);}
+.agenda-task{background:rgba(31,111,235,.14);border-color:rgba(31,111,235,.28);}
+.agenda-personal{background:rgba(232,101,10,.14);border-color:rgba(232,101,10,.35);}
+.agenda-item-title{font-weight:700;color:#fff;margin-bottom:4px;}
+.agenda-meta{color:#b7c8dd;font-size:.72rem;}
+.agenda-delete{background:none;border:0;color:#f85149;font-size:.72rem;padding:0;margin-top:5px;}
+.agenda-stats{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:16px;}
+.agenda-stat{background:#1b2431;border:1px solid rgba(255,255,255,.04);border-radius:8px;padding:18px;display:flex;align-items:center;gap:14px;}
+.agenda-stat-icon{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;}
+.agenda-stat-label{color:#b7c8dd;font-size:.85rem;}
+.agenda-stat-value{font-size:1.4rem;font-weight:800;color:#fff;}
+.agenda-blue{background:#2f81f7;}
+.agenda-yellow{background:#d29922;}
+.agenda-red{background:#f85149;}
+.agenda-green{background:#2ea043;}
+@media (max-width:1100px){.agenda-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.agenda-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:640px){.agenda-header{align-items:flex-start;flex-direction:column;}.agenda-grid,.agenda-stats{grid-template-columns:1fr;}.agenda-controls{width:100%;}.agenda-date-input{flex:1;min-width:0;}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="agenda-header">
+  <div class="agenda-title-wrap">
+    <div class="agenda-icon"><i class="fas fa-calendar-days"></i></div>
+    <div>
+      <div class="agenda-title">Minha Agenda</div>
+      <div class="agenda-subtitle">Visualize suas tarefas e compromissos</div>
+    </div>
+  </div>
+  <div class="agenda-controls">
+    <div class="agenda-range">
+      <a class="agenda-nav-btn" href="{% url 'tasks:agenda' %}?date={{ prev_week }}" title="Semana anterior"><i class="fas fa-chevron-left"></i></a>
+      <a class="agenda-nav-btn" href="{% url 'tasks:agenda' %}?date={{ next_week }}" title="Proxima semana"><i class="fas fa-chevron-right"></i></a>
+    </div>
+    <form method="get" action="{% url 'tasks:agenda' %}" class="d-flex gap-2">
+      <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" class="form-control agenda-date-input" onchange="this.form.submit()">
+    </form>
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalCompromisso"><i class="fas fa-plus me-1"></i>Compromisso</button>
+    <a href="{% url 'tasks:list' %}" class="btn-secondary-custom"><i class="fas fa-tasks me-1"></i>Gerenciar Tarefas</a>
+  </div>
+</div>
+
+<div class="agenda-grid">
+  {% for day in days %}
+  <div class="agenda-day {% if day.is_today %}today{% endif %}">
+    <div class="agenda-day-head">
+      <div class="agenda-weekday">{{ day.date|date:'D' }}</div>
+      <div class="agenda-day-number">{{ day.date|date:'d' }}</div>
+      <div class="agenda-month">{{ day.date|date:'M' }}</div>
+    </div>
+    <div class="agenda-items">
+      {% for task in day.tasks %}
+      <div class="agenda-item agenda-task">
+        <div class="agenda-item-title">{{ task.title }}</div>
+        <div class="agenda-meta">{{ task.type_label }}{% if task.client %} - {{ task.client.name|truncatechars:22 }}{% endif %}</div>
+        <div class="badge-status badge-{{ task.status_color }}" style="margin-top:6px;">{{ task.get_status_display }}</div>
+      </div>
+      {% endfor %}
+      {% for appointment in day.appointments %}
+      <div class="agenda-item agenda-personal">
+        <div class="agenda-item-title">{{ appointment.title }}</div>
+        <div class="agenda-meta">
+          {% if appointment.start_time %}{{ appointment.start_time|time:'H:i' }}{% if appointment.end_time %} - {{ appointment.end_time|time:'H:i' }}{% endif %}{% else %}Pessoal{% endif %}
+        </div>
+        {% if appointment.description %}<div class="agenda-meta">{{ appointment.description|truncatechars:48 }}</div>{% endif %}
+        <form method="post" action="{% url 'tasks:appointment_delete' appointment.pk %}" onsubmit="return confirm('Remover este compromisso?');">
+          {% csrf_token %}
+          <button type="submit" class="agenda-delete"><i class="fas fa-trash me-1"></i>Remover</button>
+        </form>
+      </div>
+      {% endfor %}
+      {% if not day.tasks and not day.appointments %}
+      <div class="agenda-empty">Nenhuma tarefa</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="agenda-stats">
+  <div class="agenda-stat"><div class="agenda-stat-icon agenda-blue"><i class="fas fa-clipboard-list"></i></div><div><div class="agenda-stat-label">Total de Tarefas</div><div class="agenda-stat-value">{{ total_tasks }}</div></div></div>
+  <div class="agenda-stat"><div class="agenda-stat-icon agenda-yellow"><i class="fas fa-hourglass-half"></i></div><div><div class="agenda-stat-label">Pendentes</div><div class="agenda-stat-value">{{ pending_tasks }}</div></div></div>
+  <div class="agenda-stat"><div class="agenda-stat-icon agenda-red"><i class="fas fa-bell"></i></div><div><div class="agenda-stat-label">Vencidas</div><div class="agenda-stat-value">{{ overdue_tasks }}</div></div></div>
+  <div class="agenda-stat"><div class="agenda-stat-icon agenda-green"><i class="fas fa-check"></i></div><div><div class="agenda-stat-label">Concluidas</div><div class="agenda-stat-value">{{ done_tasks }}</div></div></div>
+</div>
+
+<div class="modal fade" id="modalCompromisso" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-calendar-plus me-2" style="color:var(--accent-orange)"></i>Novo Compromisso</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'tasks:agenda' %}?date={{ selected_date|date:'Y-m-d' }}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12"><label class="form-label">Titulo</label><input type="text" name="title" class="form-control" required></div>
+            <div class="col-md-6"><label class="form-label">Data</label><input type="date" name="date" class="form-control" value="{{ selected_date|date:'Y-m-d' }}" required></div>
+            <div class="col-md-3"><label class="form-label">Inicio</label><input type="time" name="start_time" class="form-control"></div>
+            <div class="col-md-3"><label class="form-label">Fim</label><input type="time" name="end_time" class="form-control"></div>
+            <div class="col-12"><label class="form-label">Descricao</label><textarea name="description" rows="3" class="form-control"></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-primary-custom"><i class="fas fa-save me-1"></i>Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

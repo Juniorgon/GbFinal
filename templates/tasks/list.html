@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block title %}Tarefas{% endblock %}
+{% block nav_tasks %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <i class="fas fa-tasks" style="color:var(--accent-orange)"></i>Gestão de Tarefas
+    {% if pending_validation and user_is_admin %}
+    <span class="badge-status badge-purple ms-2" style="font-size:.75rem;">
+      <i class="fas fa-clock me-1"></i>{{ pending_validation }} aguardando validação
+    </span>
+    {% endif %}
+  </div>
+  <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalTarefa">
+    <i class="fas fa-plus me-1"></i>Nova Tarefa
+  </button>
+</div>
+
+<div class="filter-bar mb-3">
+  <form method="get" class="d-flex gap-3 align-items-end flex-wrap">
+    <div><label class="form-label mb-1">Status</label>
+      <select name="status" class="form-select" style="width:180px;">
+        <option value="">Todos</option>
+        {% for v, l in status_choices %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select></div>
+    <div><label class="form-label mb-1">Prioridade</label>
+      <select name="priority" class="form-select" style="width:140px;">
+        <option value="">Todas</option>
+        {% for v, l in priority_choices %}<option value="{{ v }}" {% if priority == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select></div>
+    <button type="submit" class="btn-primary-custom">Filtrar</button>
+    {% if status or priority %}<a href="{% url 'tasks:list' %}" class="btn-secondary-custom">Limpar</a>{% endif %}
+  </form>
+</div>
+
+{% if user_is_admin and pending_validation %}
+<div class="section-box mb-3" style="border-color:rgba(110,64,201,.4);background:rgba(110,64,201,.05);">
+  <div style="font-weight:700;margin-bottom:12px;color:#bc8cff;"><i class="fas fa-shield-check me-2"></i>Aguardando Sua Validação</div>
+  <table class="data-table">
+    <thead><tr><th>Tarefa</th><th>Concluída por</th><th>Em</th><th>Nota</th><th>Ação</th></tr></thead>
+    <tbody>
+      {% for t in tasks %}{% if t.status == 'aguardando' %}
+      <tr>
+        <td><div style="font-weight:600;">{{ t.title }}</div>{% if t.client %}<div style="font-size:.78rem;color:var(--text-muted);">{{ t.client.name }}</div>{% endif %}</td>
+        <td>{{ t.completed_by.display_name|default:'—' }}</td>
+        <td style="font-size:.82rem;">{{ t.completed_at|date:"d/m/Y H:i"|default:'—' }}</td>
+        <td style="font-size:.82rem;color:var(--text-muted);">{{ t.completion_note|truncatechars:40 }}</td>
+        <td>
+          <a href="{% url 'tasks:validate' t.pk %}" class="btn-primary-custom" style="padding:6px 14px;font-size:.8rem;background:var(--accent-purple);">
+            <i class="fas fa-check-double me-1"></i>Validar
+          </a>
+        </td>
+      </tr>
+      {% endif %}{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="section-box p-0">
+  <table class="data-table">
+    <thead><tr>
+      <th>Tarefa</th><th>Vencimento</th><th>Prioridade</th><th>Status</th><th>Cliente</th><th>Advogado</th><th>Ações</th>
+    </tr></thead>
+    <tbody>
+      {% for t in tasks %}{% if t.status != 'aguardando' or not user_is_admin %}
+      <tr {% if t.is_overdue %}style="border-left:3px solid #f85149;"{% endif %}>
+        <td>
+          <div style="font-weight:600;">{{ t.title }}</div>
+          <div style="font-size:.78rem;color:var(--text-muted);">{{ t.type_label }}</div>
+        </td>
+        <td style="font-size:.85rem;{% if t.is_overdue %}color:#f85149;font-weight:600;{% endif %}">
+          {{ t.due_date|date:"d/m/Y" }}
+          {% if t.is_overdue %}<i class="fas fa-exclamation-circle ms-1"></i>{% endif %}
+        </td>
+        <td><span class="badge-status badge-{{ t.priority_color }}">{{ t.get_priority_display }}</span></td>
+        <td>
+          <span class="badge-status badge-{{ t.status_color }}">{{ t.get_status_display }}</span>
+          {% if t.status == 'aguardando' %}
+          <div style="font-size:.72rem;color:#bc8cff;margin-top:2px;">Aguarda validação</div>
+          {% endif %}
+        </td>
+        <td style="font-size:.85rem;">{{ t.client.name|default:'—' }}</td>
+        <td style="font-size:.85rem;">{{ t.assigned_to.name|default:'—' }}</td>
+        <td>
+          <div class="d-flex gap-1 flex-wrap">
+            {% if t.status not in 'concluida,cancelada,aguardando' %}
+            <a href="{% url 'tasks:mark_done' t.pk %}" class="btn-sm-action" style="color:#3fb950;" title="Marcar como concluída">
+              <i class="fas fa-check-circle"></i>
+            </a>
+            {% endif %}
+            <a href="{% url 'tasks:edit' t.pk %}" class="btn-sm-action btn-edit"><i class="fas fa-edit"></i></a>
+            {% if user_is_admin %}
+            <a href="{% url 'tasks:delete' t.pk %}" class="btn-sm-action btn-delete" onclick="return confirm('Excluir tarefa?')"><i class="fas fa-trash"></i></a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endif %}{% endfor %}
+      {% if not tasks %}
+      <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);">
+        <i class="fas fa-tasks" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+        Nenhuma tarefa encontrada
+      </td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<div class="modal fade" id="modalTarefa" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-plus me-2" style="color:var(--accent-orange)"></i>Nova Tarefa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'tasks:create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12"><label class="form-label">Título</label>
+              <input type="text" name="title" class="form-control" required></div>
+            <div class="col-12"><label class="form-label">Descrição</label>
+              <textarea name="description" class="form-control" rows="3"></textarea></div>
+            <div class="col-md-6"><label class="form-label">Data de Vencimento</label>
+              <input type="date" name="due_date" class="form-control" required></div>
+            <div class="col-md-6"><label class="form-label">Prioridade</label>
+              <select name="priority" class="form-select">
+                {% for v, l in priority_choices %}<option value="{{ v }}" {% if v == 'media' %}selected{% endif %}>{{ l }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-6"><label class="form-label">Tipo</label>
+              <select name="type" class="form-select js-type-select">
+                {% for v, l in type_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-6 js-custom-type-wrap" style="display:none;">
+              <label class="form-label">Novo Tipo de Tarefa</label>
+              <input type="text" name="custom_type" class="form-control js-custom-type-input">
+            </div>
+            <div class="col-md-6"><label class="form-label">Advogado Responsável</label>
+              <select name="assigned_to" class="form-select">
+                <option value="">Selecione...</option>
+                {% for lawyer in lawyers %}<option value="{{ lawyer.pk }}">{{ lawyer.name }}</option>{% endfor %}
+              </select></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-primary-custom"><i class="fas fa-plus me-1"></i>Criar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function setupTaskCustomType(container) {
+  const select = container.querySelector('.js-type-select');
+  const wrap = container.querySelector('.js-custom-type-wrap');
+  const input = container.querySelector('.js-custom-type-input');
+  if (!select || !wrap || !input) return;
+
+  const sync = () => {
+    const isOther = select.value === 'outro';
+    wrap.style.display = isOther ? '' : 'none';
+    input.required = isOther;
+    if (!isOther) input.value = '';
+  };
+
+  select.addEventListener('change', sync);
+  sync();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('modalTarefa');
+  if (modal) setupTaskCustomType(modal);
+});
+</script>
+{% endblock %}

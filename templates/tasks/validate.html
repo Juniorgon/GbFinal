@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Validar Conclusão{% endblock %}
+{% block nav_tasks %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-shield-check" style="color:var(--accent-purple)"></i>Validar Conclusão de Tarefa</div>
+  <a href="{% url 'tasks:list' %}" class="btn-secondary-custom"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
+</div>
+<div class="form-card" style="max-width:640px;">
+  <div style="background:rgba(110,64,201,.08);border:1px solid rgba(110,64,201,.3);border-radius:10px;padding:20px;margin-bottom:24px;">
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">{{ task.title }}</div>
+    <div class="row" style="font-size:.85rem;gap:6px 0;">
+      {% if task.client %}<div class="col-6" style="color:var(--text-muted);">Cliente: <strong style="color:var(--text-primary)">{{ task.client.name }}</strong></div>{% endif %}
+      <div class="col-6" style="color:var(--text-muted);">Tipo: <strong style="color:var(--text-primary)">{{ task.type_label }}</strong></div>
+      <div class="col-6" style="color:var(--text-muted);">Vencimento: <strong style="color:var(--text-primary)">{{ task.due_date|date:"d/m/Y" }}</strong></div>
+      <div class="col-6" style="color:var(--text-muted);">Prioridade: <span class="badge-status badge-{{ task.priority_color }}">{{ task.get_priority_display }}</span></div>
+    </div>
+  </div>
+
+  {% if task.completion_note %}
+  <div style="margin-bottom:20px;">
+    <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px;">Nota do Advogado:</div>
+    <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;padding:14px;font-size:.9rem;">{{ task.completion_note }}</div>
+  </div>
+  {% endif %}
+
+  <div style="margin-bottom:20px;font-size:.85rem;color:var(--text-muted);">
+    Concluída por <strong style="color:var(--text-primary)">{{ task.completed_by.display_name|default:'—' }}</strong>
+    em {{ task.completed_at|date:"d/m/Y \à\s H:i"|default:'—' }}
+  </div>
+
+  <div style="background:rgba(232,101,10,.08);border:1px solid rgba(232,101,10,.25);border-radius:10px;padding:14px;margin-bottom:24px;font-size:.85rem;">
+    <i class="fas fa-exclamation-triangle me-2" style="color:var(--accent-orange)"></i>
+    <strong>Aprovar</strong> → tarefa marcada como Concluída definitivamente.<br>
+    <strong>Devolver</strong> → tarefa volta para o advogado com status "Em Andamento".
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="d-flex gap-3 justify-content-end">
+      <a href="{% url 'tasks:list' %}" class="btn-secondary-custom">Cancelar</a>
+      <button type="submit" name="action" value="reject" class="btn-danger-custom" style="padding:10px 22px;border-radius:8px;font-size:.9rem;">
+        <i class="fas fa-undo me-1"></i>Devolver ao Advogado
+      </button>
+      <button type="submit" name="action" value="approve" class="btn-primary-custom" style="background:#238636;">
+        <i class="fas fa-check-double me-1"></i>Aprovar e Concluir
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

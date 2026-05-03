@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}Advogados{% endblock %}
+{% block nav_lawyers %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-user-tie" style="color:var(--accent-orange)"></i>Gestao de Advogados</div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'lawyers:export_pdf' %}" class="btn-secondary-custom" style="padding:9px 16px;font-size:.85rem;"><i class="fas fa-file-pdf me-1" style="color:#f85149"></i>PDF</a>
+    <a href="{% url 'lawyers:export_excel' %}" class="btn-green" style="padding:9px 16px;font-size:.85rem;"><i class="fas fa-file-excel me-1"></i>Excel</a>
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalAdvogado">
+      <i class="fas fa-user-plus me-1"></i>Registrar Advogado
+    </button>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="stat-card card-blue"><div><div class="label">Total de Advogados</div><div class="value">{{ total }}</div></div><div class="icon"><i class="fas fa-user-tie"></i></div></div></div>
+  <div class="col-md-4"><div class="stat-card card-green"><div><div class="label">Advogados Ativos</div><div class="value">{{ ativos }}</div></div><div class="icon"><i class="fas fa-check"></i></div></div></div>
+  <div class="col-md-4"><div class="stat-card card-purple"><div><div class="label">Estados Representados</div><div class="value">{{ estados }}</div></div><div class="icon"><i class="fas fa-map"></i></div></div></div>
+</div>
+
+<div class="section-box p-0">
+  <table class="data-table">
+    <thead><tr>
+      <th>Nome</th><th>OAB</th><th>Email</th><th>Telefone</th><th>Especializacao</th><th>Status</th><th>Acoes</th>
+    </tr></thead>
+    <tbody>
+      {% for l in lawyers %}
+      <tr>
+        <td style="font-weight:700;">{{ l.name }}</td>
+        <td><span class="badge-status badge-info" style="font-family:monospace;">{{ l.oab_display }}</span></td>
+        <td style="font-size:.85rem;">{{ l.email }}</td>
+        <td style="font-size:.85rem;">{{ l.phone|default:'-' }}</td>
+        <td style="font-size:.82rem;color:var(--text-muted);">{{ l.specialization|default:'Nao informado' }}</td>
+        <td>
+          <span class="badge-status {% if l.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+            {{ l.is_active|yesno:"Ativo,Inativo" }}
+          </span>
+        </td>
+        <td>
+          <a href="{% url 'lawyers:edit' l.pk %}" class="btn-sm-action btn-edit"><i class="fas fa-edit me-1"></i>Editar</a>
+          <a href="{% url 'lawyers:toggle' l.pk %}" class="btn-sm-action {% if l.is_active %}btn-delete{% else %}btn-edit{% endif %}">
+            <i class="fas fa-{% if l.is_active %}ban{% else %}check{% endif %} me-1"></i>{{ l.is_active|yesno:"Desativar,Ativar" }}
+          </a>
+          <form method="post" action="{% url 'lawyers:delete' l.pk %}" style="display:inline;" onsubmit="return confirm('Excluir definitivamente o advogado {{ l.name }}?');">
+            {% csrf_token %}
+            <button type="submit" class="btn-sm-action btn-delete" style="border:0;">
+              <i class="fas fa-trash me-1"></i>Excluir
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);">
+        <i class="fas fa-user-tie" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+        Nenhum advogado cadastrado
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="modal fade" id="modalAdvogado" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-user-plus me-2" style="color:var(--accent-orange)"></i>Registrar Novo Advogado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'lawyers:create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-8"><label class="form-label">Nome Completo</label>
+              <input type="text" name="name" class="form-control" required></div>
+            <div class="col-md-4"><label class="form-label">Usuario de Login</label>
+              <input type="text" name="username" class="form-control" required></div>
+            <div class="col-md-6"><label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control" required></div>
+            <div class="col-md-3"><label class="form-label">Senha</label>
+              <input type="password" name="password" class="form-control" required></div>
+            <div class="col-md-3"><label class="form-label">Confirmar Senha</label>
+              <input type="password" name="confirm_password" class="form-control" required></div>
+            <div class="col-md-3"><label class="form-label">Numero OAB</label>
+              <input type="text" name="oab_number" class="form-control" placeholder="123456" required></div>
+            <div class="col-md-3"><label class="form-label">Estado OAB</label>
+              <select name="oab_state" class="form-select">
+                {% for v, l in estado_choices %}<option value="{{ v }}" {% if v == 'RS' %}selected{% endif %}>{{ v }}</option>{% endfor %}
+              </select></div>
+            <div class="col-md-6"><label class="form-label">Telefone</label>
+              <input type="text" name="phone" class="form-control" placeholder="(11) 99999-9999"></div>
+            <div class="col-md-6"><label class="form-label">Especializacao (Opcional)</label>
+              <input type="text" name="specialization" class="form-control" placeholder="Ex: Direito Tributario, Direito Trabalhista..."></div>
+            {% if all_branches|length > 1 %}
+            <div class="col-12">
+              <div class="form-check" style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;padding:14px 16px 14px 42px;">
+                <input class="form-check-input" type="checkbox" name="allow_all_branches" id="allowAllBranchesModal">
+                <label class="form-check-label" for="allowAllBranchesModal" style="color:var(--text-primary);font-weight:600;">Liberar acesso as duas filiais</label>
+                <div style="font-size:.78rem;color:var(--text-muted);margin-top:4px;">Se desmarcado, o advogado acessa somente a filial onde esta registrado.</div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-primary-custom"><i class="fas fa-user-plus me-1"></i>Registrar Advogado</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

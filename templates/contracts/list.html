@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block title %}Contratos{% endblock %}
+{% block nav_contracts %}active{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title"><i class="fas fa-file-contract" style="color:var(--accent-orange)"></i>Gestão de Contratos</div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'contracts:export_pdf' %}" class="btn-secondary-custom" style="padding:9px 16px;font-size:.85rem;"><i class="fas fa-file-pdf me-1" style="color:#f85149"></i>PDF</a>
+    <a href="{% url 'contracts:export_excel' %}" class="btn-green" style="padding:9px 16px;font-size:.85rem;"><i class="fas fa-file-excel me-1"></i>Excel</a>
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalContrato"><i class="fas fa-plus me-1"></i>Novo Contrato</button>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-2"><div class="stat-card card-dark" style="flex-direction:column;gap:4px;align-items:flex-start;"><div class="label">Total</div><div class="value">{{ total }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card card-green" style="flex-direction:column;gap:4px;align-items:flex-start;padding:16px 20px;"><div class="label">Ativos</div><div class="value">{{ ativos }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card" style="background:#1565c0;border-radius:12px;padding:16px 20px;flex-direction:column;gap:4px;align-items:flex-start;"><div class="label">Concluídos</div><div class="value">{{ concluidos }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card" style="background:#7b4f00;border-radius:12px;padding:16px 20px;flex-direction:column;gap:4px;align-items:flex-start;"><div class="label">Suspensos</div><div class="value">{{ suspensos }}</div></div></div>
+  <div class="col-md-2"><div class="stat-card card-dark" style="flex-direction:column;gap:4px;align-items:flex-start;"><div class="label" style="color:#79c0ff;">Valor Total</div><div class="value" style="font-size:1.1rem;color:#79c0ff;">R$ {{ valor_total|floatformat:0 }}k</div></div></div>
+  <div class="col-md-2"><div class="stat-card card-red" style="flex-direction:column;gap:4px;align-items:flex-start;padding:16px 20px;"><div class="label">Vencendo</div><div class="value">{{ vencendo }}</div><div style="font-size:.72rem;opacity:.8;">em 30 dias</div></div></div>
+</div>
+
+<div class="filter-bar mb-3">
+  <form method="get" class="d-flex gap-3 align-items-end flex-wrap">
+    <div><label class="form-label mb-1">Buscar</label>
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Título, cliente..." style="width:200px;"></div>
+    <div><label class="form-label mb-1">Status</label>
+      <select name="status" class="form-select" style="width:140px;">
+        <option value="">Todos</option>
+        <option value="ativo" {% if status == 'ativo' %}selected{% endif %}>Ativo</option>
+        <option value="concluido" {% if status == 'concluido' %}selected{% endif %}>Concluído</option>
+        <option value="suspenso" {% if status == 'suspenso' %}selected{% endif %}>Suspenso</option>
+        <option value="cancelado" {% if status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+      </select></div>
+    <div><label class="form-label mb-1">Cliente</label>
+      <select name="cliente" class="form-select" style="width:180px;">
+        <option value="">Todos</option>
+        {% for c in clients %}<option value="{{ c.pk }}" {% if cliente == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select></div>
+    <div><label class="form-label mb-1">Tipo</label>
+      <select name="judicial" class="form-select" style="width:150px;">
+        <option value="">Todos</option>
+        <option value="judicial" {% if judicial == 'judicial' %}selected{% endif %}>Judicial</option>
+        <option value="extrajudicial" {% if judicial == 'extrajudicial' %}selected{% endif %}>Extrajudicial</option>
+      </select></div>
+    <button type="submit" class="btn-primary-custom">Filtrar</button>
+    {% if q or status or cliente or judicial %}<a href="{% url 'contracts:list' %}" class="btn-secondary-custom">Limpar</a>{% endif %}
+  </form>
+</div>
+
+<div class="section-box p-0">
+  <table class="data-table">
+    <thead><tr><th>Cliente</th><th>Título</th><th>Tipo</th><th>Valor</th><th>Parcelas</th><th>Status</th><th>Vigência</th>{% if user_is_admin %}<th>Ações</th>{% endif %}</tr></thead>
+    <tbody>
+      {% for c in contracts %}
+      <tr {% if c.is_expiring_soon %}style="border-left:3px solid #e3b341;"{% endif %}>
+        <td style="font-weight:600;">{{ c.client.name }}</td>
+        <td>
+          <div>{{ c.title|truncatechars:35 }}</div>
+          <div style="font-size:.75rem;color:var(--text-muted);">{{ c.get_judicial_type_display }}</div>
+        </td>
+        <td style="font-size:.82rem;">{{ c.type_label }}</td>
+        <td style="font-weight:700;color:#79c0ff;">R$ {{ c.total_value|floatformat:2 }}</td>
+        <td style="font-size:.85rem;">{{ c.installments }}x R$ {{ c.installment_value|floatformat:2 }}</td>
+        <td>
+          <span class="badge-status
+            {% if c.status == 'ativo' %}badge-success
+            {% elif c.status == 'concluido' %}badge-info
+            {% elif c.status == 'suspenso' %}badge-warning
+            {% else %}badge-secondary{% endif %}">{{ c.get_status_display }}</span>
+          {% if c.is_expiring_soon %}<span class="badge-status badge-warning ms-1" style="font-size:.68rem;">⚠ Vencendo</span>{% endif %}
+        </td>
+        <td style="font-size:.82rem;">{{ c.start_date|date:"d/m/Y" }} – {{ c.end_date|date:"d/m/Y" }}</td>
+        {% if user_is_admin %}
+        <td>
+          <a href="{% url 'contracts:edit' c.pk %}" class="btn-sm-action btn-edit"><i class="fas fa-edit"></i></a>
+          <a href="{% url 'contracts:delete' c.pk %}" class="btn-sm-action btn-delete" onclick="return confirm('Excluir contrato?')"><i class="fas fa-trash"></i></a>
+        </td>
+        {% endif %}
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text-muted);">
+        <i class="fas fa-file-contract" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>Nenhum contrato encontrado
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="modal fade" id="modalContrato" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-plus me-2" style="color:var(--accent-purple)"></i>Novo Contrato</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'contracts:create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="section-box mb-3" style="padding:16px;">
+            <div class="form-section-title" style="margin-bottom:12px;">📋 Informações Básicas</div>
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label">Cliente *</label>
+                <select name="client" class="form-select" required>
+                  <option value="">Selecione um cliente</option>
+                  {% for c in clients %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+                </select></div>
+              <div class="col-md-6"><label class="form-label">Tipo de Contrato *</label>
+                <select name="type" class="form-select js-type-select">
+                  <option value="honorarios">Honorários Advocatícios</option>
+                  <option value="prestacao_servicos">Prestação de Serviços</option>
+                  <option value="consultoria">Consultoria Jurídica</option>
+                  <option value="retainer">Contrato de Retainer</option>
+                  <option value="sucumbencia">Honorários de Sucumbência</option>
+                  <option value="outro">Outro</option>
+                </select></div>
+              <div class="col-md-6 js-custom-type-wrap" style="display:none;">
+                <label class="form-label">Novo Tipo de Contrato</label>
+                <input type="text" name="custom_type" class="form-control js-custom-type-input">
+              </div>
+              <div class="col-12"><label class="form-label">Título do Contrato *</label>
+                <input type="text" name="title" class="form-control" placeholder="Ex: Prestação de Serviços Advocatícios - Ação Trabalhista" required></div>
+              <div class="col-12"><label class="form-label">Descrição Detalhada *</label>
+                <textarea name="description" class="form-control" rows="3" placeholder="Descreva os serviços, escopo do trabalho, responsabilidades..." required></textarea></div>
+            </div>
+          </div>
+          <div class="section-box mb-3" style="padding:16px;">
+            <div class="form-section-title" style="margin-bottom:12px;">💰 Informações Financeiras</div>
+            <div class="row g-3">
+              <div class="col-md-4"><label class="form-label">Valor Total (R$) *</label>
+                <input type="number" name="total_value" class="form-control" value="0.00" step="0.01" required></div>
+              <div class="col-md-4"><label class="form-label">Número de Parcelas *</label>
+                <input type="number" name="installments" class="form-control" value="1" min="1" required></div>
+              <div class="col-md-4"><label class="form-label">Status *</label>
+                <select name="status" class="form-select">
+                  <option value="ativo">✅ Ativo</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="suspenso">Suspenso</option>
+                </select></div>
+              <div class="col-12"><label class="form-label">Condições de Pagamento *</label>
+                <input type="text" name="payment_conditions" class="form-control" placeholder="Ex: 30% entrada + 70% em 6x mensais, vencimento dia 10" required></div>
+              <div class="col-md-4"><label class="form-label">Judicial/Extrajudicial</label>
+                <select name="judicial_type" class="form-select">
+                  <option value="judicial">Judicial</option>
+                  <option value="extrajudicial">Extrajudicial</option>
+                  <option value="ambos">Ambos</option>
+                </select></div>
+            </div>
+          </div>
+          <div class="section-box" style="padding:16px;">
+            <div class="form-section-title" style="margin-bottom:12px;">📅 Prazos</div>
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label">Data de Início *</label>
+                <input type="date" name="start_date" class="form-control" required></div>
+              <div class="col-md-6"><label class="form-label">Data de Término *</label>
+                <input type="date" name="end_date" class="form-control" required></div>
+              <div class="col-12"><label class="form-label">Observações Adicionais</label>
+                <textarea name="notes" class="form-control" rows="2" placeholder="Observações importantes, cláusulas especiais, notas internas..."></textarea></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-primary-custom" style="background:var(--accent-purple);"><i class="fas fa-plus me-1"></i>Criar Contrato</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function setupContractCustomType(container) {
+  const select = container.querySelector('.js-type-select');
+  const wrap = container.querySelector('.js-custom-type-wrap');
+  const input = container.querySelector('.js-custom-type-input');
+  if (!select || !wrap || !input) return;
+
+  const sync = () => {
+    const isOther = select.value === 'outro';
+    wrap.style.display = isOther ? '' : 'none';
+    input.required = isOther;
+    if (!isOther) input.value = '';
+  };
+
+  select.addEventListener('change', sync);
+  sync();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('modalContrato');
+  if (modal) setupContractCustomType(modal);
+});
+</script>
+{% endblock %}
