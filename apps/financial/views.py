@@ -7,6 +7,7 @@ Isolamento de filial garantido no backend.
 """
 
 import io
+from datetime import datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -76,26 +77,36 @@ def transaction_create(request):
 
     if request.method == 'POST':
         try:
+            due_date_str = request.POST.get('due_date', '')
+            if not due_date_str:
+                raise ValueError('Data de vencimento é obrigatória.')
+            try:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError('Data de vencimento inválida.')
             transaction = Transaction(
                 branch=branch,
                 type=request.POST.get('type', 'receita'),
                 category=get_transaction_category(request),
                 description=request.POST.get('description', ''),
                 value=request.POST.get('value', 0),
-                due_date=request.POST.get('due_date', ''),
+                due_date=due_date,
                 status=request.POST.get('status', 'pendente'),
                 notes=request.POST.get('notes', ''),
                 created_by=request.user,
             )
             client_id = request.POST.get('client')
             process_id = request.POST.get('process')
-            payment_date = request.POST.get('payment_date', '')
+            payment_date_str = request.POST.get('payment_date', '')
             if client_id:
                 transaction.client_id = client_id
             if process_id:
                 transaction.process_id = process_id
-            if payment_date:
-                transaction.payment_date = payment_date
+            if payment_date_str:
+                try:
+                    transaction.payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    raise ValueError('Data de pagamento inválida.')
             transaction.save()
             messages.success(request, 'Transacao salva com sucesso!')
             return redirect('financial:list')
@@ -121,19 +132,31 @@ def transaction_edit(request, pk):
 
     if request.method == 'POST':
         try:
+            due_date_str = request.POST.get('due_date', '')
+            if not due_date_str:
+                raise ValueError('Data de vencimento é obrigatória.')
+            try:
+                transaction.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError('Data de vencimento inválida.')
             transaction.type = request.POST.get('type', transaction.type)
             transaction.category = get_transaction_category(request)
             transaction.description = request.POST.get('description', '')
             transaction.value = request.POST.get('value', 0)
-            transaction.due_date = request.POST.get('due_date', '')
             transaction.status = request.POST.get('status', 'pendente')
             transaction.notes = request.POST.get('notes', '')
             client_id = request.POST.get('client')
             process_id = request.POST.get('process')
-            payment_date = request.POST.get('payment_date', '')
+            payment_date_str = request.POST.get('payment_date', '')
             transaction.client_id = client_id if client_id else None
             transaction.process_id = process_id if process_id else None
-            transaction.payment_date = payment_date if payment_date else None
+            if payment_date_str:
+                try:
+                    transaction.payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    raise ValueError('Data de pagamento inválida.')
+            else:
+                transaction.payment_date = None
             transaction.save()
             messages.success(request, 'Transacao atualizada!')
             return redirect('financial:list')

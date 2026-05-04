@@ -8,6 +8,7 @@ from .models import Contract
 from apps.clients.models import Client
 from apps.processes.models import Process
 import io
+from datetime import datetime
 
 
 def get_branch(request):
@@ -70,6 +71,15 @@ def contract_create(request):
     if request.method == 'POST':
         try:
             contract_type, custom_type = get_contract_type_data(request)
+            start_date_str = request.POST.get('start_date')
+            end_date_str = request.POST.get('end_date')
+            if not start_date_str or not end_date_str:
+                raise ValueError('Datas de início e término são obrigatórias.')
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError('Datas inválidas.')
             c = Contract(
                 branch=branch,
                 client_id=request.POST.get('client'),
@@ -82,8 +92,8 @@ def contract_create(request):
                 payment_conditions=request.POST.get('payment_conditions', ''),
                 status=request.POST.get('status', 'ativo'),
                 judicial_type=request.POST.get('judicial_type', 'judicial'),
-                start_date=request.POST.get('start_date'),
-                end_date=request.POST.get('end_date'),
+                start_date=start_date,
+                end_date=end_date,
                 notes=request.POST.get('notes', ''),
                 created_by=request.user,
             )
@@ -111,6 +121,15 @@ def contract_edit(request, pk):
     if request.method == 'POST':
         try:
             contract_type, custom_type = get_contract_type_data(request)
+            start_date_str = request.POST.get('start_date')
+            end_date_str = request.POST.get('end_date')
+            if not start_date_str or not end_date_str:
+                raise ValueError('Datas de início e término são obrigatórias.')
+            try:
+                contract.start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                contract.end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError('Datas inválidas.')
             contract.client_id = request.POST.get('client')
             contract.type = contract_type
             contract.custom_type = custom_type
@@ -121,8 +140,6 @@ def contract_edit(request, pk):
             contract.payment_conditions = request.POST.get('payment_conditions', '')
             contract.status = request.POST.get('status', 'ativo')
             contract.judicial_type = request.POST.get('judicial_type', 'judicial')
-            contract.start_date = request.POST.get('start_date')
-            contract.end_date = request.POST.get('end_date')
             contract.notes = request.POST.get('notes', '')
             process_id = request.POST.get('process')
             contract.process_id = process_id if process_id else None

@@ -93,6 +93,9 @@ class Task(models.Model):
     @property
     def is_overdue(self):
         from django.utils import timezone
+        from datetime import date
+        if not isinstance(self.due_date, date):
+            return False
         return self.status == self.STATUS_PENDENTE and self.due_date < timezone.now().date()
 
     @property

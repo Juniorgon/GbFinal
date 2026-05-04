@@ -8,7 +8,7 @@ Tarefas com dupla confirmacao:
 Permissoes reforcadas no backend.
 """
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -121,7 +121,7 @@ def agenda(request):
         'next_week': (start_date + timedelta(days=7)).isoformat(),
         'total_tasks': len(all_week_tasks),
         'pending_tasks': len([t for t in all_week_tasks if t.status in (Task.STATUS_PENDENTE, Task.STATUS_EM_ANDAMENTO, Task.STATUS_AGUARDANDO)]),
-        'overdue_tasks': len([t for t in all_week_tasks if t.status == Task.STATUS_PENDENTE and t.due_date < today]),
+        'overdue_tasks': len([t for t in all_week_tasks if t.status == Task.STATUS_PENDENTE and isinstance(t.due_date, date) and t.due_date < today]),
         'done_tasks': len([t for t in all_week_tasks if t.status == Task.STATUS_CONCLUIDA]),
         'total_appointments': appointments.count(),
     }
@@ -185,13 +185,20 @@ def task_create(request):
     if request.method == 'POST':
         try:
             task_type, custom_type = get_task_type_data(request)
+            due_date_str = request.POST.get('due_date')
+            if not due_date_str:
+                raise ValueError('Data de vencimento é obrigatória.')
+            try:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError('Data de vencimento inválida.')
             task = Task(
                 branch=branch,
                 title=request.POST.get('title', ''),
                 type=task_type,
                 custom_type=custom_type,
                 description=request.POST.get('description', ''),
-                due_date=request.POST.get('due_date'),
+                due_date=due_date,
                 priority=request.POST.get('priority', 'media'),
                 status=Task.STATUS_PENDENTE,
                 created_by=request.user,
@@ -243,7 +250,13 @@ def task_edit(request, pk):
             task.type = task_type
             task.custom_type = custom_type
             task.description = request.POST.get('description', '')
-            task.due_date = request.POST.get('due_date')
+            due_date_str = request.POST.get('due_date')
+            if not due_date_str:
+                raise ValueError('Data de vencimento é obrigatória.')
+            try:
+                task.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError('Data de vencimento inválida.')
             task.priority = request.POST.get('priority', 'media')
 
             new_status = request.POST.get('status', task.status)

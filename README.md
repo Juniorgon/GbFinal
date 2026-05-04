@@ -27,6 +27,8 @@ http://localhost/
 
 > ⚠️ **Troque as senhas e ative o 2FA antes de usar em produção!**
 
+**Nota:** As senhas padrão listadas acima são inseguras e devem ser alteradas imediatamente após o primeiro login para evitar riscos de segurança. O 2FA (Autenticação de Dois Fatores) adiciona uma camada extra de proteção, exigindo um código temporário gerado por um aplicativo como Google Authenticator, além da senha. Consulte a seção de Segurança abaixo para mais detalhes.
+
 ---
 
 ## 🏗️ Stack

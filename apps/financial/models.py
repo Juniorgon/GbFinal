@@ -56,11 +56,13 @@ class Transaction(models.Model):
 
     def save(self, *args, **kwargs):
         from django.utils import timezone
-        if self.status == self.STATUS_PENDENTE and self.due_date < timezone.now().date():
+        from datetime import date
+        if self.status == self.STATUS_PENDENTE and isinstance(self.due_date, date) and self.due_date < timezone.now().date():
             self.status = self.STATUS_VENCIDO
         super().save(*args, **kwargs)
 
     @property
     def is_overdue(self):
         from django.utils import timezone
-        return self.status == self.STATUS_PENDENTE and self.due_date < timezone.now().date()
+        from datetime import date
+        return self.status == self.STATUS_PENDENTE and isinstance(self.due_date, date) and self.due_date < timezone.now().date()
