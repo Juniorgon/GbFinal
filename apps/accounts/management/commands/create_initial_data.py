@@ -9,6 +9,48 @@ User = get_user_model()
 class Command(BaseCommand):
     help = "Create initial branches and users for GB & N.Comin Advocacia"
 
+    def ensure_user(self, *, username, email, password, first_name, last_name, role, branch, is_superuser=False):
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "role": role,
+                "branch": branch,
+                "is_staff": True,
+                "is_superuser": is_superuser,
+                "is_active": True,
+            },
+        )
+
+        fields_to_update = []
+        expected_values = {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "role": role,
+            "branch": branch,
+            "is_staff": True,
+            "is_superuser": is_superuser,
+            "is_active": True,
+        }
+
+        for field, value in expected_values.items():
+            if getattr(user, field) != value:
+                setattr(user, field, value)
+                fields_to_update.append(field)
+
+        user.set_password(password)
+        fields_to_update.append("password")
+
+        if fields_to_update:
+            user.save(update_fields=fields_to_update)
+
+        status = "criado" if created else "atualizado"
+        self.stdout.write(self.style.SUCCESS(f"Usuario {status}: {username} / {password}"))
+        return user
+
     def handle(self, *args, **options):
         branch_caxias, _ = Branch.objects.get_or_create(
             name="Caxias do Sul",
@@ -43,43 +85,34 @@ class Command(BaseCommand):
         Branch.objects.exclude(pk=branch_np.pk).filter(is_headquarters=True).update(is_headquarters=False)
         self.stdout.write(self.style.SUCCESS("Filiais verificadas"))
 
-        if not User.objects.filter(username="admin").exists():
-            User.objects.create_superuser(
-                username="admin",
-                email="admin@gbadvocacia.com.br",
-                password="Admin@123",
-                first_name="Super",
-                last_name="Administrador",
-                role="super_admin",
-                branch=branch_np,
-            )
-            self.stdout.write(self.style.SUCCESS("Super Admin: admin / Admin@123"))
-        else:
-            self.stdout.write("Super Admin ja existe.")
-
-        if not User.objects.filter(username="admin_caxias").exists():
-            User.objects.create_user(
-                username="admin_caxias",
-                email="admincaxias@gbadvocacia.com.br",
-                password="Admin@123",
-                first_name="Admin",
-                last_name="Caxias",
-                role="admin",
-                branch=branch_caxias,
-            )
-            self.stdout.write(self.style.SUCCESS("Admin Caxias: admin_caxias / Admin@123"))
-
-        if not User.objects.filter(username="admin_np").exists():
-            User.objects.create_user(
-                username="admin_np",
-                email="adminnp@gbadvocacia.com.br",
-                password="Admin@123",
-                first_name="Admin",
-                last_name="Nova Prata",
-                role="admin",
-                branch=branch_np,
-            )
-            self.stdout.write(self.style.SUCCESS("Admin Nova Prata: admin_np / Admin@123"))
+        self.ensure_user(
+            username="admin",
+            email="admin@gbadvocacia.com.br",
+            password="Admin@123",
+            first_name="Super",
+            last_name="Administrador",
+            role=User.ROLE_SUPER_ADMIN,
+            branch=branch_caxias,
+            is_superuser=True,
+        )
+        self.ensure_user(
+            username="admin_caxias",
+            email="admincaxias@gbadvocacia.com.br",
+            password="Admin@123",
+            first_name="Admin",
+            last_name="Caxias",
+            role=User.ROLE_ADMIN,
+            branch=branch_caxias,
+        )
+        self.ensure_user(
+            username="admin_np",
+            email="adminnp@gbadvocacia.com.br",
+            password="Admin@123",
+            first_name="Admin",
+            last_name="Nova Prata",
+            role=User.ROLE_ADMIN,
+            branch=branch_np,
+        )
 
         self.stdout.write("")
         self.stdout.write(self.style.SUCCESS("Sistema pronto! Acesse: http://localhost/"))
