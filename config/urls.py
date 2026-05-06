@@ -14,7 +14,6 @@ urlpatterns = [
     path('tarefas/', include('apps.tasks.urls')),
     # documentos removido conforme solicitação
     path('advogados/', include('apps.lawyers.urls')),
-    path("branches/", include("apps.branches.urls")),
     path('filiais/', include('apps.branches.urls')),
 ]
 

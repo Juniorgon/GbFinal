@@ -8,7 +8,7 @@ DEBUG = False
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
 # HTTPS security (enable when behind HTTPS termination)
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', default=False)
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True

@@ -8,6 +8,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     gcc \
+    build-essential \
     libpq-dev \
     libffi-dev \
     libssl-dev \
@@ -15,12 +16,22 @@ RUN apt-get update && apt-get install -y \
     libxslt-dev \
     libjpeg-dev \
     libpng-dev \
-    wkhtmltopdf \
+    zlib1g-dev \
     gettext \
     curl \
+    wkhtmltopdf \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    shared-mime-info \
+    fonts-dejavu-core \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
@@ -28,3 +39,5 @@ COPY . .
 RUN mkdir -p /app/media /app/staticfiles /app/logs
 
 EXPOSE 8000
+
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
