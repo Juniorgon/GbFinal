@@ -1,5 +1,7 @@
 # GB & N.Comin Advocacia — Sistema de Gestão Jurídica
 
+Plataforma web para gestão fiscal e administrativa, desenvolvida com foco em automação de processos, organização de documentos e controle de informações empresariais. Possui arquitetura voltada para escalabilidade, segurança e usabilidade, otimizando atividades rotineiras e aumentando a produtividade dos usuários.
+
 Sistema completo de gestão de escritório de advocacia com multi-filial, controle de acesso granular, 2FA e fluxo de dupla confirmação de tarefas.
 
 ---
